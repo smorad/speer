@@ -1,4 +1,5 @@
 import os
+import sys
 from Adafruit_BNO055 import BNO055
 import subprocess
 import time 
@@ -8,7 +9,7 @@ import RPi.GPIO as gpio
 
 
 RELAY_PIN = 21
-CALIBRATION_FILE='calibration0.json'
+CALIBRATION_FILE=sys.argv[1]#'calibration0.json'
 FREQ = 100
 
 def norm(v):
@@ -148,6 +149,7 @@ def setup():
     cam_proc = start_camera()
     setup_motor()
     main_loop(bno, imu_f, 0.6415)
+    #main_loop(bno, imu_f, 0.05)
 
 
 if __name__ == '__main__':
