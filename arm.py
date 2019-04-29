@@ -49,9 +49,10 @@ def start_motor(stime):
     gpio.output(RELAY_PIN, gpio.LOW)
 
 def main_loop(bno, imu_fp, t_ign):
-    ignition_timer = t_ign * FREQ
-    ignition_count = 0
     motor_on = False
+    t_fall = 0
+    fall_detected = False
+    w_print = 0
 
     gx,gy,gz = bno.read_gyroscope()
     ax,ay,az = bno.read_accelerometer()
@@ -77,6 +78,7 @@ def main_loop(bno, imu_fp, t_ign):
     tstart = time.time()
     while True:
         try:
+            w_print += 1
             stime = time.time() - tstart
             gx,gy,gz = bno.read_gyroscope()
             # Accelerometer data (in meters per second squared):
@@ -92,18 +94,31 @@ def main_loop(bno, imu_fp, t_ign):
                 'w:{:0.2F},{:0.2F},{:0.2F} ' 
                 'accel:{:0.2F},{:0.2F},{:0.2F} '
                 'lin_accel:{:0.2F},{:0.2F},{:0.2F} '
-                'grav:{:0.2F},{:0.2F},{:0.2F}\n'.format(stime,qx,qy,qz,qw,gx,gy,gz,ax,ay,az,lax,lay,laz,grx,gry,grz)
+                'grav:{:0.2F},{:0.2F},{:0.2F} '
+                'ign_t:{:0.2F}' .format(stime,qx,qy,qz,qw,gx,gy,gz,ax,ay,az,lax,lay,laz,grx,gry,grz,t_fall)
             )
+            if w_print > FREQ/2:
+                print('w: {}'.format(norm([gx, gy, gz])))
+                w_print = 0
             imu_fp.write(state_str)
-            if norm([lax, lay, laz]) > 8 and not motor_on:
-                print('T+{:.2f} | T-{:.2F}'.format(stime, float(ignition_timer - ignition_count) / FREQ))
-                ignition_count += 1
-                if ignition_count > ignition_timer:
+
+
+
+            if norm([lax, lay, lax]) > 7 and not motor_on and not fall_detected:
+                fall_detected = True
+                t_fall_start = stime
+
+            if norm([lax, lay, laz]) > 7 and not motor_on:
+                t_fall = stime - t_fall_start
+                print('T+{:.2f} | T{:.2F}'.format(stime, t_fall - t_ign))
+                if t_fall >= t_ign:
                     start_motor(stime)
                     motor_on = True
                     os.fsync(imu_fp)
             else:
-                ignition_count = 0
+                t_fall = 0
+                t_fall_start = 10e10
+                fall_detected = False
         except Exception as e:
             print(e)
 
@@ -132,7 +147,7 @@ def setup():
     bno, imu_f = setup_imu()
     cam_proc = start_camera()
     setup_motor()
-    main_loop(bno, imu_f, 0.02)
+    main_loop(bno, imu_f, 0.6415)
 
 
 if __name__ == '__main__':
