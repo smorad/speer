@@ -11,16 +11,18 @@ import math
 class Telemetry():
     gyro = [-1, -1, -1]
     accel = [-1, -1, -1]
+    acc_from_grav = -1
     quat = [-1, -1, -1, -1]
     grav = [-1, -1, -1]
     lin_acc = [-1, -1, -1]
     fall_time = -1
 
-    def update(gyro, accel, quat, grav, lin_acc, fall_time):
+    def update(gyro, accel, quat, grav, acc_from_grav, lin_acc, fall_time):
         self.gyro = gyro
         self.accel = accel
         self.quat = quat
         self.grav = grav
+        self.acc_from_grav = acc_from_grav
         self.lin_acc = lin_acc
         self.fall_time = fall_time
 
@@ -31,6 +33,9 @@ FREQ = 100
 TLM = Telemetry()
 ARMED = False
 
+
+def acc_from_grav(lin_acc, grav):
+    return np.dot(lin_acc, grav)
 
 
 def norm(v):
@@ -89,6 +94,7 @@ def main_loop2(bno, imu_fp, t_ign):
             # Linear acceleration data (i.e. acceleration from movement, not gravity--
             # returned in meters per second squared):
             lin_acc = bno.read_linear_acceleration()
+            corrected_accel = acc_from_grav(np.array(lin_acc), np.array(grav))
             state_str = (
                 'T+{} '
                 'q:{:0.2F},{:0.2F},{:0.2F},{:0.2F} '
@@ -106,14 +112,14 @@ def main_loop2(bno, imu_fp, t_ign):
                     t_fall)
             )
             imu_fp.write(state_str)
-            TLM.update(stime, gyro, accel, quat, grav, lin_acc, stime - t_fall_start, True)
+            TLM.update(stime, gyro, accel, quat, grav, corrected_accel, lin_acc, stime - t_fall_start, True)
 
 
-            if norm([lax, lay, lax]) > 7 and not motor_on and not fall_detected and ARMED:
+            if corrected_accel > 7 and not motor_on and not fall_detected and ARMED:
                 fall_detected = True
                 t_fall_start = stime
 
-            if norm([lax, lay, laz]) > 7 and not motor_on and ARMED:
+            if corrected_accel > 7 and not motor_on and ARMED:
                 t_fall = stime - t_fall_start
                 print('T+{:.2f} | T{:.2F}'.format(stime, t_fall - t_ign))
                 if t_fall >= t_ign:

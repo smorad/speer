@@ -22,8 +22,10 @@ class GUI(npyscreen.NPSAppManaged):
 class Form(npyscreen.Form):
     def create(self):
         #self.F = npyscreen.Form(name='SPEER TELEMETRY MONITOR')
+        self.ins = self.add(npyscreen.TitleFixedText, name="'q' to quit, 'a' to toggle motor arm", editable=False)
         self.t = self.add(npyscreen.TitleFixedText, name='T+', value='0', editable=False)
         self.a = self.add(npyscreen.TitleFixedText, name='Armed', value=False, editable=False)
+        self.acc_from_grav = self.add(npyscreen.TitleFixedText, name='G Acc.', value='0', editable=False)
         self.ft = self.add(npyscreen.TitleFixedText, name='Fall Time', value=False, editable=False)
 
         self.lin_acc = self.add(npyscreen.BoxTitle, name='Linear Acceleration', max_height=7, editable=False)
@@ -38,7 +40,14 @@ class Form(npyscreen.Form):
         #npyscreen.notify_wait('Update')
         #self.gyro = self.add(npyscreen.BoxTitle, name='Angular Velocity', max_height=3, values=[0,0,0])
         self.t.value = str(time.time() - T_START) 
-        self.a.value = 'YES' if arm.ARMED else 'NO'
+        if arm.ARMED:
+            self.a.value = 'YES' 
+            self.a.labelColor = 'DANGER'
+        else:
+            self.a.value = 'NO'
+            self.a.color = 'DEFAULT'
+            self.a.labelColor = 'DEFAULT'
+        self.acc_from_grav.value = arm.TLM.acc_from_grav
         self.ft.value = arm.TLM.fall_time
         self.lin_acc.values = ['Mag: '+str(arm.norm(arm.TLM.lin_acc))] + arm.TLM.lin_acc
         self.gyro.values = ['Mag: '+str(arm.norm(arm.TLM.gyro))] + arm.TLM.gyro
