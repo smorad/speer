@@ -1,8 +1,17 @@
 import npyscreen
 import time
 import arm
+import sys
+
 
 T_START = time.time()
+
+
+def quit(*args, **kwargs):
+    sys.exit(0)
+
+def toggle_arm(*args, **kwargs):
+    arm.ARMED = not arm.ARMED
 
 class GUI(npyscreen.NPSAppManaged):
     keypress_timeout_default = 1
@@ -21,11 +30,15 @@ class Form(npyscreen.Form):
         self.gyro = self.add(npyscreen.BoxTitle, name='Angular Velocity', max_height=7, editable=False)
         self.quat = self.add(npyscreen.BoxTitle, name='Orientation', max_height=6, editable=False)
 
+        self.add_handlers({
+            'q': quit,
+            'a': toggle_arm})
+
     def while_waiting(self):
         #npyscreen.notify_wait('Update')
         #self.gyro = self.add(npyscreen.BoxTitle, name='Angular Velocity', max_height=3, values=[0,0,0])
         self.t.value = str(time.time() - T_START) 
-        self.a.value = 'YES' if arm.TLM.armed else 'NO'
+        self.a.value = 'YES' if arm.ARMED else 'NO'
         self.ft.value = arm.TLM.fall_time
         self.lin_acc.values = ['Mag: '+str(arm.norm(arm.TLM.lin_acc))] + arm.TLM.lin_acc
         self.gyro.values = ['Mag: '+str(arm.norm(arm.TLM.gyro))] + arm.TLM.gyro

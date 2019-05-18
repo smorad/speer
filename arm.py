@@ -15,22 +15,21 @@ class Telemetry():
     grav = [-1, -1, -1]
     lin_acc = [-1, -1, -1]
     fall_time = -1
-    armed = False
 
-    def update(gyro, accel, quat, grav, lin_acc, fall_time, armed):
+    def update(gyro, accel, quat, grav, lin_acc, fall_time):
         self.gyro = gyro
         self.accel = accel
         self.quat = quat
         self.grav = grav
         self.lin_acc = lin_acc
         self.fall_time = fall_time
-        self.armed = armed
 
 
 RELAY_PIN = 21
 CALIBRATION_FILE=sys.argv[1]#'calibration0.json'
 FREQ = 100
 TLM = Telemetry()
+ARMED = False
 
 
 
@@ -106,14 +105,15 @@ def main_loop2(bno, imu_fp, t_ign):
                     grav[0],grav[1],grav[2],
                     t_fall)
             )
+            imu_fp.write(state_str)
             TLM.update(stime, gyro, accel, quat, grav, lin_acc, stime - t_fall_start, True)
 
 
-            if norm([lax, lay, lax]) > 7 and not motor_on and not fall_detected:
+            if norm([lax, lay, lax]) > 7 and not motor_on and not fall_detected and ARMED:
                 fall_detected = True
                 t_fall_start = stime
 
-            if norm([lax, lay, laz]) > 7 and not motor_on:
+            if norm([lax, lay, laz]) > 7 and not motor_on and ARMED:
                 t_fall = stime - t_fall_start
                 print('T+{:.2f} | T{:.2F}'.format(stime, t_fall - t_ign))
                 if t_fall >= t_ign:
