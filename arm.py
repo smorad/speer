@@ -1,16 +1,38 @@
 import os
 import sys
-from Adafruit_BNO055 import BNO055
+#from Adafruit_BNO055 import BNO055
 import subprocess
 import time 
 import json
 import math
-import RPi.GPIO as gpio
+#import RPi.GPIO as gpio
+
+
+class Telemetry():
+    gyro = [-1, -1, -1]
+    accel = [-1, -1, -1]
+    quat = [-1, -1, -1, -1]
+    grav = [-1, -1, -1]
+    lin_acc = [-1, -1, -1]
+    fall_time = -1
+    armed = False
+
+    def update(gyro, accel, quat, grav, lin_acc, fall_time, armed):
+        self.gyro = gyro
+        self.accel = accel
+        self.quat = quat
+        self.grav = grav
+        self.lin_acc = lin_acc
+        self.fall_time = fall_time
+        self.armed = armed
 
 
 RELAY_PIN = 21
 CALIBRATION_FILE=sys.argv[1]#'calibration0.json'
 FREQ = 100
+TLM = Telemetry()
+
+
 
 def norm(v):
     return math.sqrt(v[0]**2 + v[1]**2 + v[2]**2)
@@ -48,6 +70,63 @@ def start_motor(stime):
     print('MOTOR START T+{}'.format(stime))
     time.sleep(1)
     gpio.output(RELAY_PIN, gpio.LOW)
+
+
+def main_loop2(bno, imu_fp, t_ign):
+    motor_on = False
+    t_fall = 0
+    fall_detected = False
+
+    start_camera()
+    tstart = time.time()
+    while True:
+        try:
+            stime = time.time() - tstart
+            gyro = bno.read_gyroscope()
+            # Accelerometer data (in meters per second squared):
+            accel = bno.read_accelerometer()
+            quat = bno.read_quaternion()
+            grav = bno.read_gravity()
+            # Linear acceleration data (i.e. acceleration from movement, not gravity--
+            # returned in meters per second squared):
+            lin_acc = bno.read_linear_acceleration()
+            state_str = (
+                'T+{} '
+                'q:{:0.2F},{:0.2F},{:0.2F},{:0.2F} '
+                'w:{:0.2F},{:0.2F},{:0.2F} ' 
+                'accel:{:0.2F},{:0.2F},{:0.2F} '
+                'lin_accel:{:0.2F},{:0.2F},{:0.2F} '
+                'grav:{:0.2F},{:0.2F},{:0.2F} '
+                'ign_t:{:0.2F}' .format(
+                    stime,
+                    quat[0],quat[1],quat[2],quat[3],
+                    gyro[0],gyro[1],gyro[2],
+                    accel[0],accel[1],accel[2],
+                    lin_acc[0],lin_acc[1],lin_acc[2],
+                    grav[0],grav[1],grav[2],
+                    t_fall)
+            )
+            TLM.update(stime, gyro, accel, quat, grav, lin_acc, stime - t_fall_start, True)
+
+
+            if norm([lax, lay, lax]) > 7 and not motor_on and not fall_detected:
+                fall_detected = True
+                t_fall_start = stime
+
+            if norm([lax, lay, laz]) > 7 and not motor_on:
+                t_fall = stime - t_fall_start
+                print('T+{:.2f} | T{:.2F}'.format(stime, t_fall - t_ign))
+                if t_fall >= t_ign:
+                    start_motor(stime)
+                    motor_on = True
+                    os.fsync(imu_fp)
+            else:
+                t_fall = 0
+                t_fall_start = 10e10
+                fall_detected = False
+        except Exception as e:
+            print(e)
+
 
 def main_loop(bno, imu_fp, t_ign):
     motor_on = False
@@ -148,8 +227,8 @@ def setup():
     bno, imu_f = setup_imu()
     cam_proc = start_camera()
     setup_motor()
-    main_loop(bno, imu_f, 0.6415)
-    #main_loop(bno, imu_f, 0.05)
+    main_loop2(bno, imu_f, 0.6415)
+    #main_loop2(bno, imu_f, 0.05)
 
 
 if __name__ == '__main__':

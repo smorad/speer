@@ -1,16 +1,18 @@
 import sys
 import math
 import numpy as np
-from arm import FREQ
+#from arm import FREQ
+FREQ = 100
 
 t_ign = 0.6415
 path = sys.argv[1]
+gravs = []
 with open(path, 'r') as f:
     motor_on = False
     fall_detected = False
     t_fall_start = 0
     for line in f:
-        stime,quat,gyro,acc,linacc,grav = line.split(' ')
+        stime,quat,gyro,acc,linacc,grav,ign_t = line.split(' ')
         stime = float(stime.replace('T+',''))
         quat = np.array([float(q) for q in quat.replace('q:','').split(',')])
         gyro = np.array([float(q) for q in gyro.replace('w:','').split(',')])
@@ -19,11 +21,11 @@ with open(path, 'r') as f:
         grav = np.array([float(q) for q in grav.replace('grav:','').split(',')])
 
         
-        if np.linalg.norm(linacc) > 7 and not motor_on and not fall_detected:
+        if np.linalg.norm(np.dot(linacc, np.linalg.norm(grav))) > 7 and not motor_on and not fall_detected:
             fall_detected = True
             t_fall_start = stime
 
-        if np.linalg.norm(linacc) > 7 and not motor_on:
+        if np.linalg.norm(np.dot(linacc, np.linalg.norm(grav))) > 7 and not motor_on:
             t_fall = stime - t_fall_start
             print('T+{:.2f} | T{:.2F}'.format(stime, t_fall - t_ign))
             if t_fall >= t_ign:
@@ -36,5 +38,7 @@ with open(path, 'r') as f:
             fall_detected = False
 
 
+        gravs += [np.linalg.norm(grav)]
         #print(stime, np.linalg.norm(linacc))
+print(np.min(gravs), np.max(gravs))
 
