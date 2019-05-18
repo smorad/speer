@@ -32,14 +32,17 @@ CALIBRATION_FILE=sys.argv[1]#'calibration0.json'
 FREQ = 100
 TLM = Telemetry()
 ARMED = False
+GRAV_VECTOR = None
 
-
-def acc_from_grav(lin_acc, grav):
-    return np.dot(lin_acc, grav)
+def acc_from_grav(lin_acc):
+    return np.dot(lin_acc, GRAV_VECTOR)
 
 
 def norm(v):
     return math.sqrt(v[0]**2 + v[1]**2 + v[2]**2)
+
+def unit(v):
+    return [x / norm(v) for x in v]
 
 def setup_bno():
     bno = BNO055.BNO055(serial_port='/dev/serial0', rst=18)
@@ -94,6 +97,8 @@ def main_loop2(bno, imu_fp, t_ign):
             # Linear acceleration data (i.e. acceleration from movement, not gravity--
             # returned in meters per second squared):
             lin_acc = bno.read_linear_acceleration()
+            if not ARMED and SET_GRAV:
+                GRAV_VECTOR = grav / np.linalg.norm(grav)
             corrected_accel = acc_from_grav(np.array(lin_acc), np.array(grav))
             state_str = (
                 'T+{} '
@@ -102,13 +107,15 @@ def main_loop2(bno, imu_fp, t_ign):
                 'accel:{:0.2F},{:0.2F},{:0.2F} '
                 'lin_accel:{:0.2F},{:0.2F},{:0.2F} '
                 'grav:{:0.2F},{:0.2F},{:0.2F} '
-                'ign_t:{:0.2F}' .format(
+                'corr_acc:{:0.2F} '
+                'ign_t:{:0.2F}\n' .format(
                     stime,
                     quat[0],quat[1],quat[2],quat[3],
                     gyro[0],gyro[1],gyro[2],
                     accel[0],accel[1],accel[2],
                     lin_acc[0],lin_acc[1],lin_acc[2],
                     grav[0],grav[1],grav[2],
+                    corrected_accel,
                     t_fall)
             )
             imu_fp.write(state_str)

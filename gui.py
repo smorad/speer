@@ -13,6 +13,7 @@ def quit(*args, **kwargs):
 def toggle_arm(*args, **kwargs):
     arm.ARMED = not arm.ARMED
 
+
 class GUI(npyscreen.NPSAppManaged):
     keypress_timeout_default = 1
     def onStart(self):
@@ -22,9 +23,10 @@ class GUI(npyscreen.NPSAppManaged):
 class Form(npyscreen.Form):
     def create(self):
         #self.F = npyscreen.Form(name='SPEER TELEMETRY MONITOR')
-        self.ins = self.add(npyscreen.TitleFixedText, name="'q' to quit, 'a' to toggle motor arm", editable=False)
+        self.ins = self.add(npyscreen.TitleFixedText, name="'q' to quit, 'a' to toggle motor arm, 'g' to set gravity vector", editable=False)
         self.t = self.add(npyscreen.TitleFixedText, name='T+', value='0', editable=False)
         self.a = self.add(npyscreen.TitleFixedText, name='Armed', value=False, editable=False)
+        self.setg = self.add(npyscreen.TitleFixedText, name='Set G?', value='NO', editable=False)
         self.acc_from_grav = self.add(npyscreen.TitleFixedText, name='G Acc.', value='0', editable=False)
         self.ft = self.add(npyscreen.TitleFixedText, name='Fall Time', value=False, editable=False)
 
@@ -34,7 +36,11 @@ class Form(npyscreen.Form):
 
         self.add_handlers({
             'q': quit,
-            'a': toggle_arm})
+            'a': toggle_arm,
+            'g': self.set_grav})
+
+    def set_grav(self, *args, **kwargs):
+        arm.GRAV_VECTOR = arm.unit(arm.TLM.grav)
 
     def while_waiting(self):
         #npyscreen.notify_wait('Update')
@@ -47,6 +53,12 @@ class Form(npyscreen.Form):
             self.a.value = 'NO'
             self.a.color = 'DEFAULT'
             self.a.labelColor = 'DEFAULT'
+
+        if arm.GRAV_VECTOR:
+            self.setg.value='YES : ' + str(','.join([str(x) for x in arm.GRAV_VECTOR]))
+            self.setg.labelColor = 'GOOD'
+            self.setg.color = 'GOOD'
+
         self.acc_from_grav.value = arm.TLM.acc_from_grav
         self.ft.value = arm.TLM.fall_time
         self.lin_acc.values = ['Mag: '+str(arm.norm(arm.TLM.lin_acc))] + arm.TLM.lin_acc
