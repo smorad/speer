@@ -118,7 +118,7 @@ def main_loop2(bno, imu_fp, t_ign):
             imu_fp.write(state_str)
             TLM.update(stime, gyro, accel, quat, grav, lin_acc, t_fall)#stime - t_fall_start)
 
-            if norm(lin_acc) > 2:
+            if norm(lin_acc) > 5.75:
                 FALLING = True
             else:
                 FALLING = False

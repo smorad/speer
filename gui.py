@@ -6,7 +6,7 @@ import threading
 
 
 #T_START = time.time()
-IGN_TIME = 0.6415
+IGN_TIME = 0.6890 - 0.05 #0.4890#0.6890#0.6415
 
 
 def quit(*args, **kwargs):
