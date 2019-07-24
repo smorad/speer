@@ -56,14 +56,14 @@ class Form(npyscreen.Form):
 
         if arm.GRAV_VECTOR:
             self.setg.value='YES : ' + str(','.join([str(x) for x in arm.GRAV_VECTOR]))
-            self.setg.labelColor = 'GOOD'
-            self.setg.color = 'GOOD'
+            self.setg.labelColor = 'DANGER'
+            self.setg.color = 'DANGER'
 
         self.acc_from_grav.value = arm.TLM.acc_from_grav
         self.ft.value = arm.TLM.fall_time
         self.lin_acc.values = ['Mag: '+str(arm.norm(arm.TLM.lin_acc))] + arm.TLM.lin_acc
         self.gyro.values = ['Mag: '+str(arm.norm(arm.TLM.gyro))] + arm.TLM.gyro
-        self.quat.values = [self.t.value, 0, 0, 0]
+        self.quat.values = arm.TLM.quat 
         self.display()
 
 
