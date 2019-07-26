@@ -33,6 +33,9 @@ CALIBRATION_FILE=sys.argv[1]#'calibration0.json'
 FREQ = 100
 TLM = Telemetry()
 ARMED = False
+FALL_DETECTED = False
+FALLING = False
+MOTOR_ON = False
 
 
 def norm(v):
@@ -77,9 +80,10 @@ def start_motor(stime):
 
 
 def main_loop2(bno, imu_fp, t_ign):
-    motor_on = False
+    global FALL_DETECTED, MOTOR_ON, FALLING
+    MOTOR_ON = False
     t_fall = 0
-    fall_detected = False
+    #fall_detected = False
 
     #start_camera()
     tstart = time.time()
@@ -114,14 +118,19 @@ def main_loop2(bno, imu_fp, t_ign):
             imu_fp.write(state_str)
             TLM.update(stime, gyro, accel, quat, grav, lin_acc, t_fall)#stime - t_fall_start)
 
+            if norm(lin_acc) > 2:
+                FALLING = True
+            else:
+                FALLING = False
 
-            if lin_acc > 8 and not motor_on and not fall_detected and ARMED:
-                fall_detected = True
+
+            if FALLING and not MOTOR_ON and not FALL_DETECTED and ARMED:
+                FALL_DETECTED = True
                 t_fall_start = stime
 
-            if lin_acc > 8 and not motor_on and ARMED:
+            if FALLING and not MOTOR_ON and ARMED:
                 t_fall = stime - t_fall_start
-                print('T+{:.2f} | T{:.2F}'.format(stime, t_fall - t_ign))
+                #print('T+{:.2f} | T{:.2F}'.format(stime, t_fall - t_ign))
                 if t_fall >= t_ign:
                     start_motor(stime)
                     motor_on = True
@@ -129,7 +138,7 @@ def main_loop2(bno, imu_fp, t_ign):
             else:
                 t_fall = 0
                 t_fall_start = 10e10
-                fall_detected = False
+                FALL_DETECTED = False
         except Exception as e:
             #raise
             print(e)

@@ -28,7 +28,7 @@ class Form(npyscreen.Form):
         self.ins = self.add(npyscreen.TitleFixedText, name="'q' to quit, 'a' to toggle motor arm, 'g' to set gravity vector", editable=False)
         self.t = self.add(npyscreen.TitleFixedText, name='T+', value='0', editable=False)
         self.a = self.add(npyscreen.TitleFixedText, name='Armed', value=False, editable=False)
-        self.setg = self.add(npyscreen.TitleFixedText, name='Set G?', value='NO', editable=False)
+        self.fall = self.add(npyscreen.TitleFixedText, name='Falling?', value='NO', editable=False)
         self.ft = self.add(npyscreen.TitleFixedText, name='Fall Time', value=False, editable=False)
 
         self.lin_acc = self.add(npyscreen.BoxTitle, name='Linear Acceleration', max_height=7, editable=False)
@@ -59,6 +59,16 @@ class Form(npyscreen.Form):
             self.a.value = 'NO'
             self.a.color = 'DEFAULT'
             self.a.labelColor = 'DEFAULT'
+
+        if arm.FALLING:
+            self.fall.value = 'YES' 
+            self.fall.labelColor = 'DANGER'
+        else:
+            self.fall.value = 'NO'
+            self.fall.color = 'DEFAULT'
+            self.fall.labelColor = 'DEFAULT'
+
+
 
         self.ft.value = arm.TLM.fall_time
         self.lin_acc.values = ['Mag: '+str(arm.norm(arm.TLM.lin_acc))] + list(arm.TLM.lin_acc)
