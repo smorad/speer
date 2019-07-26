@@ -17,12 +17,11 @@ class Telemetry():
     lin_acc = [-1, -1, -1]
     fall_time = -1
 
-    def update(gyro, accel, quat, grav, acc_from_grav, lin_acc, fall_time):
+    def update(gyro, accel, quat, grav, lin_acc, fall_time):
         self.gyro = gyro
         self.accel = accel
         self.quat = quat
         self.grav = grav
-        self.acc_from_grav = acc_from_grav
         self.lin_acc = lin_acc
         self.fall_time = fall_time
 
@@ -32,7 +31,7 @@ CALIBRATION_FILE=sys.argv[1]#'calibration0.json'
 FREQ = 100
 TLM = Telemetry()
 ARMED = False
-GRAV_VECTOR = None
+GRAV_VECTOR = np.array([0, 0, -1])#None
 
 def acc_from_grav(lin_acc):
     return np.dot(lin_acc, GRAV_VECTOR)
@@ -97,9 +96,6 @@ def main_loop2(bno, imu_fp, t_ign):
             # Linear acceleration data (i.e. acceleration from movement, not gravity--
             # returned in meters per second squared):
             lin_acc = bno.read_linear_acceleration()
-            if not ARMED and SET_GRAV:
-                GRAV_VECTOR = grav / np.linalg.norm(grav)
-            corrected_accel = acc_from_grav(np.array(lin_acc), np.array(grav))
             state_str = (
                 'T+{} '
                 'q:{:0.2F},{:0.2F},{:0.2F},{:0.2F} '
@@ -107,7 +103,6 @@ def main_loop2(bno, imu_fp, t_ign):
                 'accel:{:0.2F},{:0.2F},{:0.2F} '
                 'lin_accel:{:0.2F},{:0.2F},{:0.2F} '
                 'grav:{:0.2F},{:0.2F},{:0.2F} '
-                'corr_acc:{:0.2F} '
                 'ign_t:{:0.2F}\n' .format(
                     stime,
                     quat[0],quat[1],quat[2],quat[3],
@@ -115,18 +110,17 @@ def main_loop2(bno, imu_fp, t_ign):
                     accel[0],accel[1],accel[2],
                     lin_acc[0],lin_acc[1],lin_acc[2],
                     grav[0],grav[1],grav[2],
-                    corrected_accel,
                     t_fall)
             )
             imu_fp.write(state_str)
             TLM.update(stime, gyro, accel, quat, grav, corrected_accel, lin_acc, stime - t_fall_start, True)
 
 
-            if corrected_accel > 7 and not motor_on and not fall_detected and ARMED:
+            if lin_acc > 8 and not motor_on and not fall_detected and ARMED:
                 fall_detected = True
                 t_fall_start = stime
 
-            if corrected_accel > 7 and not motor_on and ARMED:
+            if lin_acc > 8 and not motor_on and ARMED:
                 t_fall = stime - t_fall_start
                 print('T+{:.2f} | T{:.2F}'.format(stime, t_fall - t_ign))
                 if t_fall >= t_ign:
@@ -193,7 +187,7 @@ def main_loop(bno, imu_fp, t_ign):
             if w_print > FREQ/2:
                 print('w: {}'.format(norm([gx, gy, gz])))
                 w_print = 0
-            imu_fp.write(state_str)
+            imu_fp.write(state_str + '\n')
 
 
 

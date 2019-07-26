@@ -27,7 +27,6 @@ class Form(npyscreen.Form):
         self.t = self.add(npyscreen.TitleFixedText, name='T+', value='0', editable=False)
         self.a = self.add(npyscreen.TitleFixedText, name='Armed', value=False, editable=False)
         self.setg = self.add(npyscreen.TitleFixedText, name='Set G?', value='NO', editable=False)
-        self.acc_from_grav = self.add(npyscreen.TitleFixedText, name='G Acc.', value='0', editable=False)
         self.ft = self.add(npyscreen.TitleFixedText, name='Fall Time', value=False, editable=False)
 
         self.lin_acc = self.add(npyscreen.BoxTitle, name='Linear Acceleration', max_height=7, editable=False)
@@ -38,9 +37,6 @@ class Form(npyscreen.Form):
             'q': quit,
             'a': toggle_arm,
             'g': self.set_grav})
-
-    def set_grav(self, *args, **kwargs):
-        arm.GRAV_VECTOR = arm.unit(arm.TLM.grav)
 
     def while_waiting(self):
         #npyscreen.notify_wait('Update')
@@ -59,7 +55,6 @@ class Form(npyscreen.Form):
             self.setg.labelColor = 'DANGER'
             self.setg.color = 'DANGER'
 
-        self.acc_from_grav.value = arm.TLM.acc_from_grav
         self.ft.value = arm.TLM.fall_time
         self.lin_acc.values = ['Mag: '+str(arm.norm(arm.TLM.lin_acc))] + arm.TLM.lin_acc
         self.gyro.values = ['Mag: '+str(arm.norm(arm.TLM.gyro))] + arm.TLM.gyro
