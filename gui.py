@@ -38,8 +38,9 @@ class Form(npyscreen.Form):
         self.bno, self.imu_f = arm.setup()
         self.start_time = time.time()
 
-        thr = threading.Thread(target=arm.main_loop2, args=(self.bno, self.imu_f, IGN_TIME))
-        thr.start()
+        self.thr = threading.Thread(target=arm.main_loop2, args=(self.bno, self.imu_f, IGN_TIME))
+        self.thr.daemon = True
+        self.thr.start()
 
         self.add_handlers({
             'q': quit,
