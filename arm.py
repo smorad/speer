@@ -1,11 +1,11 @@
 import os
 import sys
-#from Adafruit_BNO055 import BNO055
+from Adafruit_BNO055 import BNO055
 import subprocess
 import time 
 import json
 import math
-#import RPi.GPIO as gpio
+import RPi.GPIO as gpio
 
 
 class Telemetry():
@@ -16,8 +16,10 @@ class Telemetry():
     grav = [-1, -1, -1]
     lin_acc = [-1, -1, -1]
     fall_time = -1
+    stime = -1
 
-    def update(gyro, accel, quat, grav, lin_acc, fall_time):
+    def update(self, stime, gyro, accel, quat, grav, lin_acc, fall_time):
+        self.stime = stime
         self.gyro = gyro
         self.accel = accel
         self.quat = quat
@@ -31,10 +33,6 @@ CALIBRATION_FILE=sys.argv[1]#'calibration0.json'
 FREQ = 100
 TLM = Telemetry()
 ARMED = False
-GRAV_VECTOR = np.array([0, 0, -1])#None
-
-def acc_from_grav(lin_acc):
-    return np.dot(lin_acc, GRAV_VECTOR)
 
 
 def norm(v):
@@ -83,8 +81,9 @@ def main_loop2(bno, imu_fp, t_ign):
     t_fall = 0
     fall_detected = False
 
-    start_camera()
+    #start_camera()
     tstart = time.time()
+    t_fall_start = float('inf')
     while True:
         try:
             stime = time.time() - tstart
@@ -113,7 +112,7 @@ def main_loop2(bno, imu_fp, t_ign):
                     t_fall)
             )
             imu_fp.write(state_str)
-            TLM.update(stime, gyro, accel, quat, grav, corrected_accel, lin_acc, stime - t_fall_start, True)
+            TLM.update(stime, gyro, accel, quat, grav, lin_acc, t_fall)#stime - t_fall_start)
 
 
             if lin_acc > 8 and not motor_on and not fall_detected and ARMED:
@@ -132,6 +131,7 @@ def main_loop2(bno, imu_fp, t_ign):
                 t_fall_start = 10e10
                 fall_detected = False
         except Exception as e:
+            #raise
             print(e)
 
 
@@ -163,6 +163,7 @@ def main_loop(bno, imu_fp, t_ign):
     print('------------------------')
     start_camera()
     tstart = time.time()
+    t_fall_start = 0
     while True:
         try:
             w_print += 1
@@ -207,9 +208,9 @@ def main_loop(bno, imu_fp, t_ign):
                 t_fall_start = 10e10
                 fall_detected = False
         except Exception as e:
-            print(e)
+            raise #print(e)
 
-        time.sleep(float(1) / FREQ)
+        #time.sleep(float(1) / FREQ)
 
 
 def load_calibration(bno):
@@ -232,12 +233,14 @@ def setup_motor():
 
 def setup():
     bno, imu_f = setup_imu()
-    cam_proc = start_camera()
+    #cam_proc = start_camera()
     setup_motor()
-    main_loop2(bno, imu_f, 0.6415)
-    #main_loop2(bno, imu_f, 0.05)
+    return bno, imu_f
+    #main_loop2(bno, imu_f, 0.6415)
+    ###main_loop2(bno, imu_f, 0.05)
 
 
 if __name__ == '__main__':
-    setup()
+    bno, imu_f = setup()
+    main_loop2(bno, imu_f, 0.6415)
 

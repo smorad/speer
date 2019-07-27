@@ -2,9 +2,11 @@ import npyscreen
 import time
 import arm
 import sys
+import threading
 
 
-T_START = time.time()
+#T_START = time.time()
+IGN_TIME = 0.6415
 
 
 def quit(*args, **kwargs):
@@ -33,15 +35,22 @@ class Form(npyscreen.Form):
         self.gyro = self.add(npyscreen.BoxTitle, name='Angular Velocity', max_height=7, editable=False)
         self.quat = self.add(npyscreen.BoxTitle, name='Orientation', max_height=6, editable=False)
 
+        self.bno, self.imu_f = arm.setup()
+        self.start_time = time.time()
+
+        thr = threading.Thread(target=arm.main_loop2, args=(self.bno, self.imu_f, IGN_TIME))
+        thr.start()
+
         self.add_handlers({
             'q': quit,
             'a': toggle_arm,
-            'g': self.set_grav})
+            })
 
     def while_waiting(self):
         #npyscreen.notify_wait('Update')
         #self.gyro = self.add(npyscreen.BoxTitle, name='Angular Velocity', max_height=3, values=[0,0,0])
-        self.t.value = str(time.time() - T_START) 
+        #arm.main_loop2(self.start_time, self.bno, self.imu_f, IGN_TIME)
+        #self.t.value = str(time.time() - arm.START_TIME) 
         if arm.ARMED:
             self.a.value = 'YES' 
             self.a.labelColor = 'DANGER'
@@ -50,18 +59,17 @@ class Form(npyscreen.Form):
             self.a.color = 'DEFAULT'
             self.a.labelColor = 'DEFAULT'
 
-        if arm.GRAV_VECTOR:
-            self.setg.value='YES : ' + str(','.join([str(x) for x in arm.GRAV_VECTOR]))
-            self.setg.labelColor = 'DANGER'
-            self.setg.color = 'DANGER'
-
         self.ft.value = arm.TLM.fall_time
-        self.lin_acc.values = ['Mag: '+str(arm.norm(arm.TLM.lin_acc))] + arm.TLM.lin_acc
-        self.gyro.values = ['Mag: '+str(arm.norm(arm.TLM.gyro))] + arm.TLM.gyro
+        self.lin_acc.values = ['Mag: '+str(arm.norm(arm.TLM.lin_acc))] + list(arm.TLM.lin_acc)
+        self.gyro.values = ['Mag: '+str(arm.norm(arm.TLM.gyro))] + list(arm.TLM.gyro)
         self.quat.values = arm.TLM.quat 
+        self.t.value = arm.TLM.stime
         self.display()
 
 
 if __name__ == '__main__':
     g = GUI()
     g.run()
+    import os
+    os.touch('bork')
+    a = arm.setup()
